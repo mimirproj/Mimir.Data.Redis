@@ -119,34 +119,42 @@ type RedisCache<'key, 'value>( redisConfiguration:string
         }
 
 
-    member this.GetOrSet(key:'key, init:'key -> Result<'value, 'error>, ?maxAge) =
-        match this.TryGet(key, ?maxAge=maxAge) with
-        | Some existing ->
-            Ok existing
-
-        | None ->
-            match init key with
-            | Ok value ->
-                this.Set(key, value)
-                Ok value
-
-            | error ->
-                error
-
-
-    member this.GetOrSetAsync(key:'key, initAsync:'key -> Task<Result<'value, 'error>>) =
-        task {
-            match! this.TryGetAsync(key) with
+    member this.GetOrSet(key:'key, getFromSource:Result<'key,exn> -> Result<'value, 'error>, ?maxAge) =
+        try
+            match this.TryGet(key, ?maxAge=maxAge) with
             | Some existing ->
-                return Ok existing
+                Ok existing
 
             | None ->
-                match! initAsync key with
+                match getFromSource(Ok key) with
                 | Ok value ->
                     this.Set(key, value)
-                    return Ok value
+                    Ok value
 
                 | error ->
-                    return error
+                    error
+
+        with e ->
+            getFromSource(Error e)
+
+
+    member this.GetOrSetAsync(key:'key, getFromSourceAsync:Result<'key, exn> -> Task<Result<'value, 'error>>) =
+        task {
+            try
+                match! this.TryGetAsync(key) with
+                | Some existing ->
+                    return Ok existing
+
+                | None ->
+                    match! getFromSourceAsync(Ok key) with
+                    | Ok value ->
+                        this.Set(key, value)
+                        return Ok value
+
+                    | error ->
+                        return error
+
+            with e ->
+                return! getFromSourceAsync(Error e)
         }
 

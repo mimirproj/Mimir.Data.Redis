@@ -7,7 +7,7 @@
     <Description>Mimir's Data access for Redis</Description>
     <PackageTags>Mimir Data Redis</PackageTags>
 
-    <Version>1.0.0-alpha</Version>
+    <Version>3.0.0-alpha</Version>
     <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
     <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
     <NeutralLanguage>en</NeutralLanguage>
@@ -25,8 +25,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Mimir.Jsonic" Version="1.4.0-alpha" />
-    <PackageReference Include="Mimir.Jsonic.Net" Version="1.3.0-alpha" />
+    <PackageReference Include="Mimir.Jsonic" Version="3.0.0-alpha" />
+    <PackageReference Include="Mimir.Jsonic.Net" Version="3.0.0-alpha" />
     <PackageReference Include="Ply" Version="0.3.1" />
     <PackageReference Include="StackExchange.Redis" Version="2.2.4" />
   </ItemGroup>
