@@ -123,7 +123,7 @@ type RedisCache<'key, 'value>( redisConfiguration:string
         try
             match this.TryGet(key, ?maxAge=maxAge) with
             | Some existing ->
-                {| IsLive = true
+                {| IsLive = false
                    Value = existing
                 |}
                 |> Ok
@@ -133,7 +133,7 @@ type RedisCache<'key, 'value>( redisConfiguration:string
                 | Ok value ->
                     this.Set(key, value)
                     Ok {|
-                        IsLive = false
+                        IsLive = true
                         Value = value
                     |}
 
@@ -158,7 +158,7 @@ type RedisCache<'key, 'value>( redisConfiguration:string
                 match! this.TryGetAsync(key) with
                 | Some existing ->
                     return Ok
-                        {| IsLive = true
+                        {| IsLive = false
                            Value = existing
                         |}
 
@@ -167,7 +167,7 @@ type RedisCache<'key, 'value>( redisConfiguration:string
                     | Ok value ->
                         do! this.SetAsync(key, value)
                         return Ok
-                            {| IsLive = false
+                            {| IsLive = true
                                Value = value
                             |}
 
