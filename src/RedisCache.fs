@@ -119,42 +119,70 @@ type RedisCache<'key, 'value>( redisConfiguration:string
         }
 
 
-    member this.GetOrSet(key:'key, getFromSource:Result<'key,exn> -> Result<'value, 'error>, ?maxAge) =
+    member this.GetOrSet(key:'key, getFromSource:Result<'key,exn> -> Result<_, 'error>, ?maxAge) =
         try
             match this.TryGet(key, ?maxAge=maxAge) with
             | Some existing ->
-                Ok existing
+                {| IsLive = true
+                   Value = existing
+                |}
+                |> Ok
 
             | None ->
                 match getFromSource(Ok key) with
                 | Ok value ->
                     this.Set(key, value)
-                    Ok value
+                    Ok {|
+                        IsLive = false
+                        Value = value
+                    |}
 
-                | error ->
-                    error
+                | Error e ->
+                    Error e
 
         with e ->
-            getFromSource(Error e)
+            match getFromSource(Error e) with
+            | Ok existing ->
+                Ok {|
+                    IsLive = true
+                    Value = existing
+                |}
+
+            | Error e ->
+                Error e
 
 
-    member this.GetOrSetAsync(key:'key, getFromSourceAsync:Result<'key, exn> -> Task<Result<'value, 'error>>) =
+    member this.GetOrSetAsync(key:'key, getFromSourceAsync:Result<'key, exn> -> Task<Result<_, 'error>>) =
         task {
             try
                 match! this.TryGetAsync(key) with
                 | Some existing ->
-                    return Ok existing
+                    return Ok
+                        {| IsLive = true
+                           Value = existing
+                        |}
 
                 | None ->
                     match! getFromSourceAsync(Ok key) with
                     | Ok value ->
-                        this.Set(key, value)
-                        return Ok value
+                        do! this.SetAsync(key, value)
+                        return Ok
+                            {| IsLive = false
+                               Value = value
+                            |}
 
-                    | error ->
-                        return error
+                    | Error e ->
+                        return Error e
 
             with e ->
-                return! getFromSourceAsync(Error e)
+                match! getFromSourceAsync(Error e) with
+                | Ok existing ->
+                    return Ok
+                        {| IsLive = true
+                           Value = existing
+                        |}
+
+                | Error e ->
+                    return Error e
         }
 

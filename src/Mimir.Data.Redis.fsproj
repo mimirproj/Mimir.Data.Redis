@@ -7,7 +7,7 @@
     <Description>Mimir's Data access for Redis</Description>
     <PackageTags>Mimir Data Redis</PackageTags>
 
-    <Version>3.0.0-alpha</Version>
+    <Version>3.0.1-alpha</Version>
     <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
     <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
     <NeutralLanguage>en</NeutralLanguage>
