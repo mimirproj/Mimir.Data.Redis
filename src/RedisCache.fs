@@ -119,7 +119,7 @@ type RedisCache<'key, 'value>( redisConfiguration:string
         }
 
 
-    member this.GetOrSet(key:'key, getFromSource:Result<'key,exn> -> Result<_, 'error>, ?maxAge) =
+    member this.GetOrSet(key:'key, getFromSource:_ -> _ -> Result<_, 'error>, ?maxAge) =
         try
             match this.TryGet(key, ?maxAge=maxAge) with
             | Some existing ->
@@ -129,7 +129,7 @@ type RedisCache<'key, 'value>( redisConfiguration:string
                 |> Ok
 
             | None ->
-                match getFromSource(Ok key) with
+                match getFromSource key None with
                 | Ok value ->
                     this.Set(key, value)
                     Ok {|
@@ -141,7 +141,7 @@ type RedisCache<'key, 'value>( redisConfiguration:string
                     Error e
 
         with e ->
-            match getFromSource(Error e) with
+            match getFromSource key (Some e) with
             | Ok existing ->
                 Ok {|
                     IsLive = true
@@ -152,7 +152,7 @@ type RedisCache<'key, 'value>( redisConfiguration:string
                 Error e
 
 
-    member this.GetOrSetAsync(key:'key, getFromSourceAsync:Result<'key, exn> -> Task<Result<_, 'error>>) =
+    member this.GetOrSetAsync(key:'key, getFromSourceAsync:_ -> _ -> Task<Result<_, 'error>>) =
         task {
             try
                 match! this.TryGetAsync(key) with
@@ -163,7 +163,7 @@ type RedisCache<'key, 'value>( redisConfiguration:string
                         |}
 
                 | None ->
-                    match! getFromSourceAsync(Ok key) with
+                    match! getFromSourceAsync key None with
                     | Ok value ->
                         do! this.SetAsync(key, value)
                         return Ok
@@ -175,7 +175,7 @@ type RedisCache<'key, 'value>( redisConfiguration:string
                         return Error e
 
             with e ->
-                match! getFromSourceAsync(Error e) with
+                match! getFromSourceAsync key (Some e) with
                 | Ok existing ->
                     return Ok
                         {| IsLive = true
