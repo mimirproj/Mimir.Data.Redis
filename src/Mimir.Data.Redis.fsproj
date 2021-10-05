@@ -7,7 +7,7 @@
     <Description>Mimir's Data access for Redis</Description>
     <PackageTags>Mimir Data Redis</PackageTags>
 
-    <Version>4.0.0-alpha</Version>
+    <Version>4.1.0-alpha</Version>
     <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
     <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
     <NeutralLanguage>en</NeutralLanguage>
@@ -21,6 +21,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Include="RedisMap.fs" />
     <Compile Include="RedisCache.fs" />
   </ItemGroup>
 
