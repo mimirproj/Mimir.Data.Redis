@@ -141,3 +141,32 @@ type RedisMap<'key, 'value>( redisConfiguration:string
                 |> Option.filter(fun entry -> entry.IsAlive)
                 |> Option.map(fun entry -> entry.Value)
         }
+
+
+    member this.Update(key, updater, ?expiresIn) =
+
+        let anyUpdate = this.TryGet(key) |> updater
+
+        match anyUpdate with
+        | None -> ()
+
+        | Some value ->
+            this.Set(key, value, ?expiresIn=expiresIn)
+
+        anyUpdate
+
+
+
+    member this.UpdateAsync(key, updater, ?expiresIn) =
+        task {
+            let! anyValue = this.TryGetAsync(key)
+            let anyUpdate = updater anyValue
+
+            match anyUpdate with
+            | None -> ()
+
+            | Some value ->
+                do! this.SetAsync(key, value, ?expiresIn=expiresIn)
+
+            return anyUpdate
+        }
