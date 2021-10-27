@@ -73,27 +73,27 @@ type RedisMap<'key, 'value>( redisConfiguration:string
         |> List.toArray
 
 
-    member __.Set(firstKey:'key, firstValue:'value, ?expiresIn, ?more:('key * 'value) list) =
+    member __.Add(firstKey:'key, firstValue:'value, ?expiresIn, ?more:('key * 'value) list) =
         let anyExpiry = expiresIn |> Option.map(fun ts -> DateTimeOffset.UtcNow + ts)
         let entries = mkEntries(firstKey, firstValue, anyExpiry, defaultArg more [])
         let db = redis.Value.GetDatabase()
         db.HashSet(hashKey, entries)
 
 
-    member __.SetAsync(firstKey:'key, firstValue:'value, ?expiresIn, ?more:('key * 'value) list)  =
+    member __.AddAsync(firstKey:'key, firstValue:'value, ?expiresIn, ?more:('key * 'value) list)  =
         let anyExpiry = expiresIn |> Option.map(fun ts -> DateTimeOffset.UtcNow + ts)
         let entries = mkEntries(firstKey, firstValue, anyExpiry, defaultArg more [])
         let db = redis.Value.GetDatabase()
         db.HashSetAsync(hashKey, entries)
 
 
-    member __.Delete(firstKey:'key, ?moreKeys:'key list) =
+    member __.Remove(firstKey:'key, ?moreKeys:'key list) =
         let keys = mkKeys(firstKey, defaultArg moreKeys [])
         let db = redis.Value.GetDatabase()
         db.HashDelete(hashKey, keys)
 
 
-    member __.DeleteAsync(firstKey:'key, ?moreKeys:'key list) =
+    member __.RemoveAsync(firstKey:'key, ?moreKeys:'key list) =
         let keys = mkKeys(firstKey, defaultArg moreKeys [])
         let db = redis.Value.GetDatabase()
         db.HashDeleteAsync(hashKey, keys)
@@ -109,7 +109,7 @@ type RedisMap<'key, 'value>( redisConfiguration:string
         // Delete if expired
         match anyItem with
         | Some item when not item.IsAlive ->
-            __.Delete(key) |> ignore
+            __.Remove(key) |> ignore
 
         | _ -> ()
 
@@ -131,7 +131,7 @@ type RedisMap<'key, 'value>( redisConfiguration:string
             // Delete if expired
             match anyItem with
             | Some item when not item.IsAlive ->
-                let! __ = __.DeleteAsync(key)
+                let! __ = __.RemoveAsync(key)
                 ()
 
             | _ -> ()
@@ -151,7 +151,7 @@ type RedisMap<'key, 'value>( redisConfiguration:string
         | None -> ()
 
         | Some value ->
-            this.Set(key, value, ?expiresIn=expiresIn)
+            this.Add(key, value, ?expiresIn=expiresIn)
 
         anyUpdate
 
@@ -166,7 +166,7 @@ type RedisMap<'key, 'value>( redisConfiguration:string
             | None -> ()
 
             | Some value ->
-                do! this.SetAsync(key, value, ?expiresIn=expiresIn)
+                do! this.AddAsync(key, value, ?expiresIn=expiresIn)
 
             return anyUpdate
         }
