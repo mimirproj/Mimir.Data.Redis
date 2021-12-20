@@ -2,7 +2,7 @@ namespace Mimir.Data.Redis
 
 open System
 open System.Threading.Tasks
-open FSharp.Control.Tasks
+open FSharp.Control
 open Mimir.Jsonic
 open Mimir.Jsonic.Net
 open StackExchange.Redis

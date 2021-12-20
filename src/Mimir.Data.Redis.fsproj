@@ -1,11 +1,11 @@
 <Project Sdk="Microsoft.NET.Sdk">
 	<PropertyGroup>
-		<TargetFramework>net5.0</TargetFramework>
+		<TargetFramework>net6.0</TargetFramework>
 		<GenerateDocumentationFile>true</GenerateDocumentationFile>
 		<Authors>Mimir</Authors>
 		<Description>Mimir's Data access for Redis</Description>
 		<PackageTags>Mimir Data Redis</PackageTags>
-		<Version>5.0.0-alpha</Version>
+		<Version>6.0.0</Version>
 		<GeneratePackageOnBuild>false</GeneratePackageOnBuild>
 		<PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
 		<NeutralLanguage>en</NeutralLanguage>
@@ -20,9 +20,8 @@
 		<Compile Include="RedisCache.fs"/>
 	</ItemGroup>
 	<ItemGroup>
-		<PackageReference Include="Mimir.Jsonic" Version="5.0.0-alpha"/>
-		<PackageReference Include="Mimir.Jsonic.Net" Version="5.0.0-alpha"/>
-		<PackageReference Include="Ply" Version="0.3.1"/>
-		<PackageReference Include="StackExchange.Redis" Version="2.2.79"/>
+		<PackageReference Include="Mimir.Jsonic" Version="6.0.0"/>
+		<PackageReference Include="Mimir.Jsonic.Net" Version="6.2.0"/>
+		<PackageReference Include="StackExchange.Redis" Version="2.2.88"/>
 	</ItemGroup>
 </Project>
