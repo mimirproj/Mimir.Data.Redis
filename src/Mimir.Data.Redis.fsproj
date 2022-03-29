@@ -5,7 +5,7 @@
 		<Authors>Mimir</Authors>
 		<Description>Mimir's Data access for Redis</Description>
 		<PackageTags>Mimir Data Redis</PackageTags>
-		<Version>6.1.1</Version>
+		<Version>6.1.2</Version>
 		<GeneratePackageOnBuild>false</GeneratePackageOnBuild>
 		<PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
 		<NeutralLanguage>en</NeutralLanguage>

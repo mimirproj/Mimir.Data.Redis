@@ -87,23 +87,11 @@ type RedisCache<'key, 'value>( redisConfiguration:string
             Codec.decodeString entryCodec (RedisValue.op_Implicit entry)
             |> Result.toOption
 
-    let getAllEntriesAsync(db:IDatabase) = 
-        task {
-            let! allEntries = db.HashGetAllAsync(hashKey)
-
-            return 
-                allEntries 
-                |> Array.choose(fun entry -> 
-                    tryDecodeKey entry.Name
-                    |> Option.map (fun k -> k, entry.Value)
-                )
-        }
-
     let cancellationToken = new CancellationTokenSource()
     let startGarbageCollectorLoop() = 
         task {
             while not cancellationToken.IsCancellationRequested do 
-                do! Async.Sleep(60000)
+                do! Async.Sleep(int (maxEntryAge.TotalSeconds * 1.5))
 
                 try 
                     let mutable numCollected = 0
