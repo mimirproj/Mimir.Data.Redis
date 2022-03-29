@@ -41,6 +41,8 @@ module RedisCache =
 
 
 open RedisCache
+open System.Threading
+open System.Diagnostics
 
 type RedisCache<'key, 'value>( redisConfiguration:string
                              , hashTableName: string
@@ -57,6 +59,14 @@ type RedisCache<'key, 'value>( redisConfiguration:string
         Codec.encodeToString false keyCodec
         >> redisValue
 
+    let tryDecodeKey (key:RedisValue) =
+        if key.IsNullOrEmpty then 
+            None 
+
+        else 
+            Codec.decodeString keyCodec (RedisValue.op_Implicit key)
+            |> Result.toOption
+
     let mkKeys (firstKey:'key, moreKeys:'key list) =
         firstKey :: moreKeys
         |> List.map mkKey
@@ -69,6 +79,64 @@ type RedisCache<'key, 'value>( redisConfiguration:string
             HashEntry(name = mkKey key, value = redisValue value))
         |> List.toArray
 
+    let tryDecodeEntry (entry:RedisValue) =
+        if entry.IsNullOrEmpty then 
+            None 
+
+        else 
+            Codec.decodeString entryCodec (RedisValue.op_Implicit entry)
+            |> Result.toOption
+
+    let getAllEntriesAsync(db:IDatabase) = 
+        task {
+            let! allEntries = db.HashGetAllAsync(hashKey)
+
+            return 
+                allEntries 
+                |> Array.choose(fun entry -> 
+                    tryDecodeKey entry.Name
+                    |> Option.map (fun k -> k, entry.Value)
+                )
+        }
+
+    let cancellationToken = new CancellationTokenSource()
+    let startGarbageCollectorLoop() = 
+        task {
+            while not cancellationToken.IsCancellationRequested do 
+                do! Async.Sleep(60000)
+
+                try 
+                    let mutable numCollected = 0
+                    let sw = Stopwatch.StartNew()
+                    let db = redis.Value.GetDatabase()
+                    let! allEntries = db.HashGetAllAsync(hashKey)
+
+                    for entry in allEntries do 
+                        match tryDecodeKey entry.Name, tryDecodeEntry entry.Value with
+                        | Some _, Some entry when entry.CreatedAt + maxEntryAge > DateTimeOffset.UtcNow -> 
+                            () // Key decodes, Entry decodes and expiry is still future, so do nothing
+
+                        | _ -> 
+                            // Either the key or entry don't decode, or it is expired, so delete.
+                            let! _ = db.HashDeleteAsync(hashKey, entry.Name)
+                            numCollected <- numCollected + 1
+
+                    if numCollected > 0 then
+                        printfn $"RedisCache {hashTableName}: Collected {numCollected} keys in {sw.Elapsed.TotalSeconds} sec."
+
+                with e -> 
+                    printfn $"RedisCache {hashTableName}: Collection failed: {e.Message}"
+        }
+        |> ignore // Tasks are hot so it is already started.
+
+    do startGarbageCollectorLoop()
+
+
+    interface IDisposable with 
+        member __.Dispose() =
+            cancellationToken.Cancel()
+            cancellationToken.Dispose()
+            
 
     member __.Set(firstKey:'key, firstValue:'value, ?more:('key * 'value) list)  =
         let entries = mkEntries(firstKey, firstValue, defaultArg more [])
@@ -94,28 +162,48 @@ type RedisCache<'key, 'value>( redisConfiguration:string
         db.HashDeleteAsync(hashKey, keys)
 
 
-    member __.TryGet(key:'key, ?maxAge:TimeSpan) =
-        let age = maxAge |> Option.defaultValue maxEntryAge
+    member this.TryGet(key:'key, ?maxAge:TimeSpan) =
+        let maxAge = maxAge |> Option.defaultValue maxEntryAge
 
         let db = redis.Value.GetDatabase()
-        db.HashGet(hashKey, mkKey key)
-        |> tryDecodeRedisValue entryCodec
-        |> Option.filter(fun entry -> DateTimeOffset.UtcNow - entry.CreatedAt <= age)
-        |> Option.map(fun entry -> entry.Value)
+        let value = db.HashGet(hashKey, mkKey key)
+
+        match value |> tryDecodeRedisValue entryCodec with
+        | None -> 
+            // If the value isn't null but it fails to decode, then delete!
+            if value.IsNullOrEmpty then this.Delete(key) |> ignore 
+            None
+
+        | Some entry ->
+            if entry.CreatedAt + maxAge <= DateTimeOffset.UtcNow then 
+                this.Delete(key) |> ignore // Expired
+                None
+            else 
+                Some (entry.Value)
 
 
-    member __.TryGetAsync(key:'key, ?maxAge:TimeSpan) =
+    member this.TryGetAsync(key:'key, ?maxAge:TimeSpan) =
         task {
-            let age = maxAge |> Option.defaultValue maxEntryAge
+            let maxAge = maxAge |> Option.defaultValue maxEntryAge
 
             let db = redis.Value.GetDatabase()
-            let! redisValue = db.HashGetAsync(hashKey, mkKey key)
+            let! value = db.HashGetAsync(hashKey, mkKey key)
 
-            return
-                redisValue
-                |> tryDecodeRedisValue entryCodec
-                |> Option.filter(fun entry -> DateTimeOffset.UtcNow - entry.CreatedAt <= age)
-                |> Option.map(fun entry -> entry.Value)
+            match value |> tryDecodeRedisValue entryCodec with
+            | None -> 
+                // If the value isn't null but it fails to decode, then delete!
+                if value.IsNullOrEmpty then 
+                    let! _ = this.DeleteAsync(key)
+                    ()
+
+                return None
+
+            | Some entry ->
+                if entry.CreatedAt + maxAge <= DateTimeOffset.UtcNow then 
+                    this.Delete(key) |> ignore // Expired
+                    return None
+                else 
+                    return Some (entry.Value)
         }
 
 
