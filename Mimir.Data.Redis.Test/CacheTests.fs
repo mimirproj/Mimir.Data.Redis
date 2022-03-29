@@ -14,6 +14,7 @@ let cache = new RedisCache<Guid, string>( "localhost,abortConnect=false"
                                         , Codec.uuid
                                         , Codec.string
                                         , cacheKeyTtl
+                                        , TimeSpan.FromSeconds 0.1
                                         )
 
 [<Test>]

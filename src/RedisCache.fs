@@ -49,6 +49,7 @@ type RedisCache<'key, 'value>( redisConfiguration:string
                              , keyCodec: Codec<'key>
                              , valueCodec: Codec<'value>
                              , maxEntryAge: TimeSpan
+                             , ?gcInterval: TimeSpan
                              ) =
 
     let hashKey = redisKey hashTableName
@@ -89,10 +90,10 @@ type RedisCache<'key, 'value>( redisConfiguration:string
 
     let cancellationToken = new CancellationTokenSource()
     let startGarbageCollectorLoop() = 
+        let gcInterval = defaultArg gcInterval (TimeSpan.FromSeconds 1.0)
+
         task {
             while not cancellationToken.IsCancellationRequested do 
-                do! Async.Sleep(int (maxEntryAge.TotalSeconds * 1.5))
-
                 try 
                     let mutable numCollected = 0
                     let sw = Stopwatch.StartNew()
@@ -114,6 +115,8 @@ type RedisCache<'key, 'value>( redisConfiguration:string
 
                 with e -> 
                     printfn $"RedisCache {hashTableName}: Collection failed: {e.Message}"
+
+                do! Async.Sleep(int gcInterval.TotalMilliseconds)
         }
         |> ignore // Tasks are hot so it is already started.
 
